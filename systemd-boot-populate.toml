@@ -1,3 +1,14 @@
-[Main]
+[main]
 distro_name = "Linux"
 verbose = true
+options = [
+
+]
+
+[loader]
+default = "linux"
+timeout = 5
+editor = false
+auto_entries = true
+auto_firmware = true
+console_mode = "keep"

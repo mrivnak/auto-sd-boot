@@ -1,12 +1,14 @@
 [main]
-distro_name = "Linux"
 verbose = true
+no_delete = false
+distro_name = "Linux"
 options = [
-
+    "quiet",
+    "rw"
 ]
 
 [loader]
-default = "linux"
+default = "linux-lts"
 timeout = 5
 editor = false
 auto_entries = true

@@ -3,6 +3,7 @@ import getpass
 import jinja2
 import pathlib
 import re
+import subprocess
 import sys
 import termcolor
 import toml
@@ -122,7 +123,7 @@ def load_kernels(loader_conf):
 
         kernels.append({
             'filename': match.group(1),
-            'version': match.group(2),
+            'version': match.group(2) if not 'arch' in open(pathlib.PosixPath('/etc', 'os-release').resolve()).readline().lower() else f'{match.group(2)}-' + subprocess.run([f"pacman -Qi {match.group(2)} | grep -Po \'^Version\s*: \K.+\'"], shell=True, stdout=subprocess.PIPE).stdout.decode('utf-8').strip('\n'),
             'initramfs': initramfs_match.group(1) if any((initramfs_match := initramfs_re.match(x)) for x in files) else None
         })
 

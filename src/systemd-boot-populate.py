@@ -9,14 +9,14 @@ import termcolor
 import toml
 
 class Paths:
-    CONFIG_PATH = pathlib.PosixPath('/etc', 'systemd-boot-populate.toml').resolve()
-    LOADER_TEMPLATE_PATH = pathlib.PosixPath(__file__).parent.joinpath('templates', 'loader.conf').resolve()
-    ENTRY_TEMPLATE_PATH = pathlib.PosixPath(__file__).parent.joinpath('templates', 'entry.conf').resolve()
+    CONFIG_PATH = pathlib.PosixPath('/etc', 'systemd-boot-populate.toml')
+    LOADER_TEMPLATE_PATH = pathlib.PosixPath(__file__).parent.joinpath('templates', 'loader.conf')
+    ENTRY_TEMPLATE_PATH = pathlib.PosixPath(__file__).parent.joinpath('templates', 'entry.conf')
 
-    BOOT_DIR = pathlib.PosixPath('/boot').resolve()
+    BOOT_DIR = pathlib.PosixPath('/boot')
 
-    LOADER_OUTPUT_PATH = pathlib.PosixPath('/efi', 'loader', 'loader.conf').resolve()
-    ENTRY_OUTPUT_DIR = BOOT_DIR.joinpath('loader', 'entries').resolve()
+    LOADER_OUTPUT_PATH = pathlib.PosixPath('/efi', 'loader', 'loader.conf')
+    ENTRY_OUTPUT_DIR = BOOT_DIR.joinpath('loader', 'entries')
 
 def strip_blank_lines(text):
     return re.sub(r'\n\s*\n', '\n', text, re.MULTILINE)  # Remove extra blank lines in the output text
@@ -68,16 +68,19 @@ def load_config(conf):
 def load_loader_config():
     return toml.loads(open(Paths.CONFIG_PATH).read())['loader']
 
-def gen_loader(conf):
+def gen_loader(conf, loader_conf):
     t = jinja2.Template(open(Paths.LOADER_TEMPLATE_PATH).read())
 
+    if conf['verbose']:
+        print('\n', termcolor.colored('Generating ' + str(Paths.LOADER_OUTPUT_PATH) + ' ... ' + termcolor.colored(u'✓', 'green'), attrs=['bold']), sep='')
+
     loader = t.render(
-        default=conf.get('default'),
-        timeout=conf.get('timeout'),
-        editor='yes' if conf.get('editor') else 'no',  # Systemd-boot expects "yes" and "no" (and "1" and "0" for the following lines)
-        auto_entries=1 if conf.get('auto_entries') else 0,  # rather than true or false for these fields
-        auto_firmware=1 if conf.get('auto_entries') else 0,
-        console_mode=conf.get('console_mode')
+        default=loader_conf.get('default'),
+        timeout=loader_conf.get('timeout'),
+        editor='yes' if loader_conf.get('editor') else 'no',  # Systemd-boot expects "yes" and "no" (and "1" and "0" for the following lines)
+        auto_entries=1 if loader_conf.get('auto_entries') else 0,  # rather than true or false for these fields
+        auto_firmware=1 if loader_conf.get('auto_entries') else 0,
+        console_mode=loader_conf.get('console_mode')
     )
 
     open(Paths.LOADER_OUTPUT_PATH, 'w').write(strip_blank_lines(loader))
@@ -88,6 +91,13 @@ def gen_entries(conf, loader_conf):
     kernels = load_kernels(loader_conf)
 
     for item in kernels:
+        if conf['verbose']:
+            print('\n', f'Found kernel {item.get("filename")} of version {item.get("version")}', sep='')
+            if item['initramfs']:
+                print(f'Found initramfs {item.get("initramfs")} for kernel {item.get("filename")}')
+
+            print(termcolor.colored('Generating' + str(Paths.ENTRY_OUTPUT_DIR.joinpath(f'{item.get("version")}.conf')) + ' ... ' + termcolor.colored(u'✓', 'green'), attrs=['bold']))
+        
         entry = t.render(
             title=conf['distro_name'],
             version=item['version'],
@@ -123,7 +133,7 @@ def load_kernels(loader_conf):
 
         kernels.append({
             'filename': match.group(1),
-            'version': match.group(2) if not 'arch' in open(pathlib.PosixPath('/etc', 'os-release').resolve()).readline().lower() else f'{match.group(2)}-' + subprocess.run([f"pacman -Qi {match.group(2)} | grep -Po \'^Version\s*: \K.+\'"], shell=True, stdout=subprocess.PIPE).stdout.decode('utf-8').strip('\n'),
+            'version': match.group(2) if not 'arch' in open(pathlib.PosixPath('/etc', 'os-release')).readline().lower() else f'{match.group(2)}-' + subprocess.run([f"pacman -Qi {match.group(2)} | grep -Po \'^Version\s*: \K.+\'"], shell=True, stdout=subprocess.PIPE).stdout.decode('utf-8').strip('\n'),
             'initramfs': initramfs_match.group(1) if any((initramfs_match := initramfs_re.match(x)) for x in files) else None
         })
 
@@ -162,5 +172,5 @@ if __name__ == "__main__":
             except OSError as e:
                 print(termcolor.colored("ERROR", 'red'), ':', e, sep='', file=sys.stderr)
 
-    gen_loader(loader_conf)
     gen_entries(conf, loader_conf)
+    gen_loader(conf, loader_conf)

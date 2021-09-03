@@ -8,7 +8,7 @@ options = [
 ]
 
 [loader]
-default = "linux-lts"
+default = "linux"
 timeout = 5
 editor = false
 auto_entries = true

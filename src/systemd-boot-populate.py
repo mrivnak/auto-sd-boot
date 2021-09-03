@@ -119,7 +119,7 @@ def load_kernels(loader_conf):
     for file in kernel_files:
         match = kernel_re.search(file)
         
-        initramfs_re = re.compile(f'(initramfs-{match.group(2)})')
+        initramfs_re = re.compile(f'(initramfs-{match.group(2)}.img)')
 
         kernels.append({
             'filename': match.group(1),

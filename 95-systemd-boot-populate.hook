@@ -6,7 +6,7 @@ Type = Package
 Target = linux*
 
 [Action]
-Description = Populating systemd-boot entries
+Description = Populating systemd-boot entries...
 When = PostTransaction
 Exec = /usr/bin/systemd-boot-populate -d 'Arch Linux'
 Depends = python

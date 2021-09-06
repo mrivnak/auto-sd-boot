@@ -146,7 +146,9 @@ def get_version(generic):
     if not 'arch' in open(pathlib.PosixPath('/etc', 'os-release')).readline().lower():
         return generic
     else:
-        return subprocess.run([f"pacman -Qi {generic} | grep -Po \'^Version\s*: \K.+\'"], shell=True, stdout=subprocess.PIPE).stdout.decode('utf-8').strip('\n'),
+        result = subprocess.run([f"pacman -Qi {generic} | grep -Po \'^Version\s*: \K.+\'"], shell=True, stdout=subprocess.PIPE)
+        result = result.stdout.decode('utf-8').strip('\n')
+        return result
 
 if __name__ == "__main__":
     # Confirm that script is running as root

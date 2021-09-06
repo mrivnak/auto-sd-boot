@@ -75,7 +75,7 @@ def gen_loader(conf, loader_conf):
         print(termcolor.colored('Generating ' + str(Paths.LOADER_OUTPUT_PATH) + ' ... ' + termcolor.colored(u'✓', 'green'), attrs=['bold']), sep='')
 
     loader = t.render(
-        default=loader_conf.get('default'),
+        default=get_version(loader_conf.get('default')),
         timeout=loader_conf.get('timeout'),
         editor='yes' if loader_conf.get('editor') else 'no',  # Systemd-boot expects "yes" and "no" (and "1" and "0" for the following lines)
         auto_entries=1 if loader_conf.get('auto_entries') else 0,  # rather than true or false for these fields
@@ -135,13 +135,18 @@ def load_kernels(loader_conf):
 
         kernels.append({
             'filename': match.group(1),
-            # On Arch, kernels are given a generic name, this uses `pacman` to find the current version of the kernel
-            'version': match.group(2) if not 'arch' in open(pathlib.PosixPath('/etc', 'os-release')).readline().lower() else subprocess.run([f"pacman -Qi {match.group(2)} | grep -Po \'^Version\s*: \K.+\'"], shell=True, stdout=subprocess.PIPE).stdout.decode('utf-8').strip('\n'),
+            'version': get_version(match.group(2)),
             'initramfs': initramfs_match.group(1) if any((initramfs_match := initramfs_re.match(x)) for x in files) else None
         })
 
     return kernels
-        
+
+# On Arch, kernels are given a generic name, this uses `pacman` to find the current version of the kernel
+def get_version(generic):
+    if not 'arch' in open(pathlib.PosixPath('/etc', 'os-release')).readline().lower():
+        return generic
+    else:
+        return subprocess.run([f"pacman -Qi {generic} | grep -Po \'^Version\s*: \K.+\'"], shell=True, stdout=subprocess.PIPE).stdout.decode('utf-8').strip('\n'),
 
 if __name__ == "__main__":
     # Confirm that script is running as root

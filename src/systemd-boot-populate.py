@@ -72,7 +72,7 @@ def gen_loader(conf, loader_conf):
     t = jinja2.Template(open(Paths.LOADER_TEMPLATE_PATH).read())
 
     if conf['verbose']:
-        print('\n', termcolor.colored('Generating ' + str(Paths.LOADER_OUTPUT_PATH) + ' ... ' + termcolor.colored(u'✓', 'green'), attrs=['bold']), sep='')
+        print(termcolor.colored('Generating ' + str(Paths.LOADER_OUTPUT_PATH) + ' ... ' + termcolor.colored(u'✓', 'green'), attrs=['bold']), sep='')
 
     loader = t.render(
         default=loader_conf.get('default'),
@@ -92,7 +92,7 @@ def gen_entries(conf, loader_conf):
 
     for item in kernels:
         if conf['verbose']:
-            print('\n', f'Found kernel {item.get("filename")} of version {item.get("version")}', sep='')
+            print(f'Found kernel {item.get("filename")} of version {item.get("version")}', sep='')
             if item['initramfs']:
                 print(f'Found initramfs {item.get("initramfs")} for kernel {item.get("filename")}')
 
@@ -115,14 +115,16 @@ def load_kernels(loader_conf):
     kernel_re = re.compile(r'(vmlinu[x|z]-(.*))')  # Setup regex for kernel and initramfs filenames
     kernel_files = [file for file in files if kernel_re.match(file)]  # Find all kernel filenames
 
-    # Check if the default kernel selection exists and issue a warning if not
-    found_default = False
-    for file in kernel_files:
-        match = kernel_re.search(file)
-        if match.group(2) == loader_conf.get('default'):
-            found_default = True
-    if not found_default:
-        print(termcolor.colored('WARNING', 'yellow'), f': Cannot find default kernel selection \"{loader_conf["default"]}\"', sep='', file=sys.stderr)
+    # Of course we don't need to check if the default is valid if there's no default
+    if load_config['default'] is not None:
+        # Check if the default kernel selection exists and issue a warning if not
+        found_default = False
+        for file in kernel_files:
+            match = kernel_re.search(file)
+            if match.group(2) == loader_conf.get('default'):
+                found_default = True
+        if not found_default:
+            print(termcolor.colored('WARNING', 'yellow'), f': Cannot find default kernel selection \"{loader_conf["default"]}\"', sep='', file=sys.stderr)
 
 
     kernels = []
@@ -133,6 +135,7 @@ def load_kernels(loader_conf):
 
         kernels.append({
             'filename': match.group(1),
+            # On Arch, kernels are given a generic name, this uses `pacman` to find the current version of the kernel
             'version': match.group(2) if not 'arch' in open(pathlib.PosixPath('/etc', 'os-release')).readline().lower() else subprocess.run([f"pacman -Qi {match.group(2)} | grep -Po \'^Version\s*: \K.+\'"], shell=True, stdout=subprocess.PIPE).stdout.decode('utf-8').strip('\n'),
             'initramfs': initramfs_match.group(1) if any((initramfs_match := initramfs_re.match(x)) for x in files) else None
         })
@@ -168,6 +171,8 @@ if __name__ == "__main__":
         files = [x for x in pathlib.Path(Paths.ENTRY_OUTPUT_DIR).iterdir() if x.is_file()]
         for file in files:
             try:
+                if conf['verbose']:
+                    print(f'Deleting config file {file} ...', termcolor.colored(u'✗', 'red'))
                 file.unlink()
             except OSError as e:
                 print(termcolor.colored("ERROR", 'red'), ':', e, sep='', file=sys.stderr)

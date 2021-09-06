@@ -116,7 +116,7 @@ def load_kernels(loader_conf):
     kernel_files = [file for file in files if kernel_re.match(file)]  # Find all kernel filenames
 
     # Of course we don't need to check if the default is valid if there's no default
-    if load_config['default'] is not None:
+    if loader_conf['default'] is not None:
         # Check if the default kernel selection exists and issue a warning if not
         found_default = False
         for file in kernel_files:
